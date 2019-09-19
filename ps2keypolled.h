@@ -13,6 +13,7 @@ extern "C"{
     extern void ps2k_sendbyte(unsigned char);
     extern unsigned char ps2k_translate(int);
     extern void ps2k_init (unsigned char clock, unsigned char data);
+    extern void ps2k_attach(void (*callback_function)(int key_code));
 #ifdef __cplusplus
 } // extern "C"
 #endif

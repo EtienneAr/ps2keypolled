@@ -11,21 +11,22 @@
 
 unsigned char ps2k_clk=3, ps2k_dat=7;
 
+void (*cb_func_usr)(int key_code);
+
 #define WAITLOW(pin) while (digitalRead(pin) != 0) ;
 #define WAITHIGH(pin) while (digitalRead(pin) != 1) ;
 
 /*
  * ps2k_init
  * initialize our interface to a PS2 keyboard.
- * Set the clock and data pins, and "claim" the clock to
- * make the keyboard buffer data.
+ * Set the clock and data pins
  */
 void ps2k_init (unsigned char clock, unsigned char data)
 {
     ps2k_clk = clock;
     ps2k_dat = data;
-    pinMode(ps2k_clk, OUTPUT);
-    digitalWrite(ps2k_clk, 0);		/* Claim the clock */
+    pinMode(ps2k_clk, INPUT);
+    digitalWrite(ps2k_clk, 1);		/* Enable pullups */
     pinMode(ps2k_dat, INPUT);
     digitalWrite(ps2k_dat, 1);		/* Enable pullups */
 }
@@ -37,8 +38,7 @@ void ps2k_init (unsigned char clock, unsigned char data)
  * to a multi-symbol key, or an acknowledgement, or a key-release
  * event; we don't care at all.
  *
- * This is primarilly an internal subroutine; note that it does NOT
- * release the clock signal to enable the keyboard to send any data.
+ * This is primarilly an internal subroutine.
  */
 unsigned char ps2k_getcode(void)
 {
@@ -69,8 +69,6 @@ unsigned char ps2k_getcode(void)
  *   returns <keycode> for simple keys
  *   returns <keycode>+PS2K_EXTEND for keys with an E0 leadin code
  *   returns -(<keycode>) for key release events (negative numbers!)
- * Leaves the keyboard with our host driving the clock singal low, which
- *  forces the keyboard to buffer (and not send) additional data.
  */
 int ps2k_getkey(void)
 {
@@ -78,8 +76,6 @@ int ps2k_getkey(void)
     int result;
 
     result = 0;
-    digitalWrite(ps2k_clk, HIGH);	/* release ownership; let keybd send */
-    pinMode(ps2k_clk, INPUT);
     digitalWrite(ps2k_dat, HIGH);	/* make sure data is also an input. */
     pinMode(ps2k_dat, INPUT);		/*   With pullup! */
 
@@ -96,8 +92,6 @@ int ps2k_getkey(void)
 	    result = - (PS2K_EXTEND + keycode);
 	}
     }
-    pinMode(ps2k_clk, OUTPUT);	/* reclaim the clock line */
-    digitalWrite(ps2k_clk, 0);	/*(stops keyboard from additional sends) */
     return result;
 }
 
@@ -153,4 +147,14 @@ void ps2k_sendbyte(unsigned char code)
 
     pinMode(ps2k_clk, OUTPUT);		/* reclaim clock */
     digitalWrite(ps2k_clk, 0);		/*   stop additional transmitting */
+}
+
+void cb_func_clk() {
+    int key = ps2k_getkey();
+    cb_func_usr(key);
+}
+
+void ps2k_attach(void (*callback_function)(int key_code)) {
+    cb_func_usr = callback_function;
+    attachInterrupt(digitalPinToInterrupt(ps2k_clk), cb_func_clk, LOW);
 }
