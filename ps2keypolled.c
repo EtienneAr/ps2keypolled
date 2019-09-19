@@ -76,6 +76,8 @@ int ps2k_getkey(void)
     int result;
 
     result = 0;
+    pinMode(ps2k_clk, INPUT);       /* make sure clk is an input. */
+    digitalWrite(ps2k_clk, 1);      /* Enable pullups */
     digitalWrite(ps2k_dat, HIGH);	/* make sure data is also an input. */
     pinMode(ps2k_dat, INPUT);		/*   With pullup! */
 
@@ -106,6 +108,9 @@ int ps2k_getkey(void)
  * keyboard might send.  They'll show up to ps2k_getkey and will need to
  * be ignorned (or not, as the case may be.)
  */
+
+//TODO : Make sure, this is working...
+
 void ps2k_sendbyte(unsigned char code)
 {
     unsigned char parity = 0;		/* Get first byte */
@@ -144,9 +149,6 @@ void ps2k_sendbyte(unsigned char code)
     delayMicroseconds(50);		/* This seems to be important! */
     while (digitalRead(ps2k_clk) == 0 || digitalRead(ps2k_dat) == 0)
 	;  				/* Wait for keyboard to be done */
-
-    pinMode(ps2k_clk, OUTPUT);		/* reclaim clock */
-    digitalWrite(ps2k_clk, 0);		/*   stop additional transmitting */
 }
 
 void cb_func_clk() {
